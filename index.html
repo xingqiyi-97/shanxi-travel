@@ -367,6 +367,46 @@ body {
   z-index: 4;
   white-space: nowrap;
 }
+
+/* drawer item styles */
+.drawer-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  letter-spacing: .5px;
+  margin: 16px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.drawer-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #f0f0f0;
+}
+.drawer-item {
+  background: #f8f9f8;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2a1a;
+  margin-bottom: 6px;
+}
+.item-note {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  font-weight: 400;
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+/* Step 5 mobile */
+body { background: #c8b89a; }
+.map-wrap { contain: layout; isolation: isolate; }
+.route-area { overflow: hidden; }
 </style>
 </head>
 <body>
@@ -407,7 +447,7 @@ body {
           <span class="card-tag tag-play">🏛 游</span>
           <span class="card-tag tag-buy">🛍 买</span>
         </div>
-        <div class="card-hint">云冈石窟 · 华严寺 · 奶皮子卷</div>
+        <div class="card-hint">云冈石窟 · 悬空寺 · 雁门关</div>
       </div>
       <div style="flex:1"></div>
     </div>
@@ -426,7 +466,7 @@ body {
           <span class="card-tag tag-food">🥣 吃</span>
           <span class="card-tag tag-play">🏔 游</span>
         </div>
-        <div class="card-hint">芦芽山 · 碗托 · 泡温泉</div>
+        <div class="card-hint">芦芽山 · 忻州古城 · 温泉</div>
       </div>
       <div style="flex:1"></div>
     </div>
@@ -444,7 +484,7 @@ body {
           <span class="card-tag tag-food">🔪 吃</span>
           <span class="card-tag tag-play">🏛 游</span>
         </div>
-        <div class="card-hint">晋祠 · 省博 · 刀削面</div>
+        <div class="card-hint">晋祠 · 省博 · 王家大院</div>
       </div>
       <div style="flex:1"></div>
     </div>
@@ -501,7 +541,7 @@ body {
       <div class="legend-dot" style="background:#e8b84a"></div>太原
     </div>
     <div class="legend-item" onclick="openDrawer('linfen')">
-      <div class="legend-dot" style="background:#9b4ae8"></div>临汾
+      <div class="legend-dot" style="background:#7ab84a"></div>临汾
     </div>
     <div class="legend-item" onclick="openDrawer('yuncheng')">
       <div class="legend-dot" style="background:#e84a6f"></div>运城
@@ -524,213 +564,154 @@ body {
 </div>
 
 <script>
-var CITIES = {
+const drawerData = {
   datong: {
     name: '大同',
-    icon: '🏛',
     color: '#e8754a',
-    bg: '#fff4ef',
-    sections: [
-      {
-        title: '🍜 吃 · 市区',
-        type: 'items',
-        items: [
-          { name: '齐家疙瘩汤', note: '一定要吃开花黄馍馍' },
-          { name: '弘雅饭店', note: '' },
-          { name: '凯鸽酒楼', note: '⚠️ 一定要早点去！必点：鲜榨沙棘汁 + 黄米凉糕' },
-          { name: '龙聚祥烧麦馆', note: '吃奶皮子卷' },
-          { name: '小媳妇凉粉', note: '' },
-        ]
-      },
-      {
-        title: '🍜 吃 · 周边',
-        type: 'items',
-        items: [
-          { name: '浑源凉粉 + 莜面', note: '去悬空寺途中，在浑源县城吃' },
-        ]
-      },
-      {
-        title: '🏛 游',
-        type: 'items',
-        items: [
-          { name: '云冈石窟', note: '⭐ 一定要请讲解，或提前看纪录片' },
-          { name: '华严寺', note: '' },
-          { name: '大同美术馆', note: '' },
-        ]
-      },
-      {
-        title: '🏨 住',
-        type: 'chips',
-        items: ['可以花园酒店', '王夫至尊酒店']
-      },
-      {
-        title: '🛍 买',
-        type: 'items',
-        items: [
-          { name: '华严寺周边', note: '' },
-          { name: '云冈石窟周边', note: '推荐去 3 号洞窟附近的文创亭子，货更全' },
-        ]
-      },
-    ]
+    food: [
+      { name: '齐家疙瘩汤', note: '推荐开花黄馍馍' },
+      { name: '弘雅饭店', note: '' },
+      { name: '凯鸽酒楼', note: '早点去，必点鲜榨沙棘汁+黄米凉糕' },
+      { name: '龙聚祥烧麦馆', note: '点奶皮子卷' },
+      { name: '小媳妇凉粉', note: '' },
+      { name: '浑源县城', note: '去悬空寺路上，吃浑源凉粉、莜面' },
+    ],
+    stay: [
+      { name: '花园酒店', note: '' },
+      { name: '王夫至尊酒店', note: '' },
+    ],
+    play: [
+      { name: '华严寺', note: '' },
+      { name: '云冈石窟', note: '一定要请讲解，或提前看纪录片；推荐3号洞窟附近文创亭子' },
+      { name: '大同美术馆', note: '' },
+      { name: '悬空寺', note: '建议包车' },
+      { name: '应县木塔', note: '建议包车' },
+      { name: '代县·雁门关', note: '建议包车' },
+    ],
+    buy: [
+      { name: '华严寺周边', note: '' },
+      { name: '云冈石窟文创', note: '3号洞窟附近文创亭，货更全' },
+    ],
+    hint: '云冈石窟 · 悬空寺 · 雁门关',
   },
   xinzhou: {
     name: '忻州',
-    icon: '🏔',
     color: '#4a9be8',
-    bg: '#eff6ff',
-    sections: [
-      {
-        title: '🥣 吃',
-        type: 'items',
-        items: [
-          { name: '碗托', note: '' },
-          { name: '真味居一部', note: '点焖面' },
-          { name: '公园街夜市', note: '荞面河捞' },
-          { name: '利民中街眼镜烧烤', note: '肉饼大王肉夹馍' },
-          { name: '彩虹饭店', note: '鳌鱼过油肉' },
-          { name: '和禾拉面', note: '早上去吃' },
-        ]
-      },
-      {
-        title: '🏔 游',
-        type: 'items',
-        items: [
-          { name: '芦芽山 · 后马伦村', note: '景色像新疆，强推！' },
-          { name: '忻州古城', note: '' },
-          { name: '泡温泉', note: '' },
-        ]
-      },
-    ]
+    food: [
+      { name: '碗托', note: '' },
+      { name: '真味居一部', note: '点焖面' },
+      { name: '公园街夜市·荞面河捞', note: '' },
+      { name: '利民中街眼镜烧烤·肉饼大王肉夹馍', note: '' },
+      { name: '彩虹饭店', note: '鳌鱼过油肉' },
+      { name: '和禾拉面', note: '早餐推荐' },
+    ],
+    play: [
+      { name: '芦芽山·后马伦村', note: '像新疆的景色' },
+      { name: '忻州古城', note: '' },
+      { name: '温泉', note: '可以泡温泉' },
+    ],
+    hint: '芦芽山 · 忻州古城 · 温泉',
   },
   taiyuan: {
     name: '太原',
-    icon: '🔪',
-    color: '#c89a20',
-    bg: '#fffbef',
-    sections: [
-      {
-        title: '🔪 吃',
-        type: 'items',
-        items: [
-          { name: '剔尖面 / 打卤面 / 刀削面', note: '山西面食三件套' },
-          { name: '御河伍号', note: '茴香白玉丝 + 沙棘醪糟汤 + 海皇豆腐煲' },
-          { name: '好天地饭庄', note: '' },
-          { name: '炒不烂子', note: '' },
-          { name: '灌肠', note: '' },
-          { name: '南九斤面皮', note: '' },
-          { name: '蘸串串', note: '' },
-          { name: '酸甜麻辣拌', note: '' },
-          { name: '沾片子', note: '' },
-        ]
-      },
-      {
-        title: '🏛 游',
-        type: 'items',
-        items: [
-          { name: '晋祠', note: '' },
-          { name: '山西省博物馆', note: '' },
-          { name: '太原市博物馆', note: '' },
-          { name: '太原植物园', note: '' },
-          { name: '榆次 · 常家庄园', note: '' },
-          { name: '王家大院', note: '' },
-        ]
-      },
-    ]
+    color: '#e8b84a',
+    food: [
+      { name: '剔尖面', note: '' },
+      { name: '打卤面', note: '' },
+      { name: '刀削面', note: '' },
+      { name: '御河伍号', note: '茴香白玉丝+沙棘醪糟汤+海皇豆腐煲+醋溜丸子' },
+      { name: '好天地饭庄', note: '' },
+      { name: '炒不烂子', note: '' },
+      { name: '灌肠', note: '' },
+      { name: '南九斤面皮', note: '' },
+      { name: '蘸串串', note: '' },
+      { name: '酸甜麻辣拌', note: '' },
+      { name: '沾片子', note: '' },
+    ],
+    play: [
+      { name: '晋祠', note: '' },
+      { name: '山西省博物馆', note: '' },
+      { name: '太原植物园', note: '' },
+      { name: '榆次·常家庄园', note: '建议包车' },
+      { name: '王家大院', note: '建议包车' },
+    ],
+    hint: '晋祠 · 省博 · 王家大院',
   },
   linfen: {
     name: '临汾',
-    icon: '💧',
-    color: '#9b4ae8',
-    bg: '#f5f0ff',
-    sections: [
-      {
-        title: '🍎 吃',
-        type: 'items',
-        items: [
-          { name: '吉县苹果 + 隰县梨', note: '当地特产，路上买' },
-          { name: '白家牛肉丸子面', note: '' },
-          { name: '臻火候饼墩墩', note: '' },
-        ]
-      },
-      {
-        title: '💧 游',
-        type: 'items',
-        items: [
-          { name: '壶口瀑布', note: '' },
-          { name: '小西天', note: '' },
-          { name: '广胜寺 · 飞虹塔', note: '' },
-        ]
-      },
-    ]
+    color: '#7ab84a',
+    food: [
+      { name: '吉县苹果', note: '' },
+      { name: '隰县梨', note: '' },
+      { name: '白家牛肉丸子面', note: '' },
+      { name: '臻火候饼墩墩', note: '' },
+    ],
+    play: [
+      { name: '小西天', note: '' },
+      { name: '壶口瀑布', note: '' },
+      { name: '广胜寺·飞虹塔', note: '' },
+    ],
+    hint: '壶口瀑布 · 小西天 · 飞虹塔',
   },
   yuncheng: {
     name: '运城',
-    icon: '🧂',
     color: '#e84a6f',
-    bg: '#fff0f4',
-    sections: [
-      {
-        title: '🍗 吃',
-        type: 'items',
-        items: [
-          { name: '星河摇滚炒鸡（总店）', note: '' },
-          { name: '焦圈 + 枣蛋', note: '当地小吃' },
-          { name: '黄河夜市', note: '老王烧烤运城凉菜、麻辣串、孜然炒面、茶汤' },
-          { name: '雪花酪', note: '' },
-          { name: '张氏北相羊肉胡卜（八一总店）', note: '必点：羊肉胡卜 + 蒜爆羊肚' },
-        ]
-      },
-      {
-        title: '🧂 游 · 市区',
-        type: 'items',
-        items: [
-          { name: '关公圣像', note: '⚠️ 和关帝庙不在一起，关帝庙可以不去' },
-          { name: '盐湖', note: '' },
-        ]
-      },
-      {
-        title: '🌿 游 · 周边',
-        type: 'items',
-        items: [
-          { name: '芮城 · 永乐宫', note: '' },
-        ]
-      },
-    ]
-  }
+    food: [
+      { name: '星河摇滚炒鸡（总店）', note: '' },
+      { name: '焦圈', note: '' },
+      { name: '枣蛋', note: '' },
+      { name: '黄河夜市', note: '老王烧烤运城凉菜、麻辣串、孜然炒面、茶汤' },
+      { name: '雪花酪', note: '' },
+      { name: '张氏北相羊肉胡卜（八一总店）', note: '吃羊肉胡卜+蒜爆羊肚' },
+    ],
+    play: [
+      { name: '关公圣像', note: '' },
+      { name: '盐湖', note: '' },
+      { name: '关帝庙', note: '' },
+      { name: '芮城·永乐宫', note: '周边景点' },
+    ],
+    hint: '盐湖 · 永乐宫 · 关公圣像',
+  },
 };
 
 function openDrawer(cityKey) {
-  var city = CITIES[cityKey];
+  var city = drawerData[cityKey];
+  if (!city) return;
   document.getElementById('drawerName').textContent = city.name;
   document.getElementById('drawerName').style.color = city.color;
   var icon = document.getElementById('drawerIcon');
-  icon.textContent = city.icon;
-  icon.style.background = city.bg;
+  // emoji mapping
+  var icons = { datong: '🏛', xinzhou: '🏔', taiyuan: '🔪', linfen: '💧', yuncheng: '🧂' };
+  var bgs   = { datong: '#fff4ef', xinzhou: '#eff6ff', taiyuan: '#fffbef', linfen: '#f5f0ff', yuncheng: '#fff0f4' };
+  icon.textContent = icons[cityKey] || '📍';
+  icon.style.background = bgs[cityKey] || '#f5f5f5';
 
-  var body = document.getElementById('drawerBody');
   var html = '';
-  city.sections.forEach(function(sec) {
-    html += '<div class="section">';
-    html += '<div class="section-title">' + sec.title + '</div>';
-    if (sec.type === 'items') {
-      html += '<div class="item-list">';
-      sec.items.forEach(function(item) {
-        html += '<div class="item-card">';
-        html += '<div class="item-name">' + item.name + '</div>';
-        if (item.note) html += '<div class="item-note">' + item.note + '</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-    } else if (sec.type === 'chips') {
-      html += '<div class="chip-row">';
-      sec.items.forEach(function(chip) {
-        html += '<div class="chip">' + chip + '</div>';
-      });
-      html += '</div>';
-    }
-    html += '</div>';
-  });
-  body.innerHTML = html;
+  if (city.food && city.food.length) {
+    html += '<div class="drawer-section-title">🍜 吃</div>';
+    city.food.forEach(function(item) {
+      html += '<div class="drawer-item">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
+    });
+  }
+  if (city.play && city.play.length) {
+    html += '<div class="drawer-section-title">🗺 游</div>';
+    city.play.forEach(function(item) {
+      html += '<div class="drawer-item">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
+    });
+  }
+  if (city.stay && city.stay.length) {
+    html += '<div class="drawer-section-title">🏨 住</div>';
+    city.stay.forEach(function(item) {
+      html += '<div class="drawer-item">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
+    });
+  }
+  if (city.buy && city.buy.length) {
+    html += '<div class="drawer-section-title">🛍 买</div>';
+    city.buy.forEach(function(item) {
+      html += '<div class="drawer-item">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
+    });
+  }
+  document.getElementById('drawerBody').innerHTML = html;
 
   document.getElementById('overlay').classList.add('open');
   document.getElementById('drawer').classList.add('open');
