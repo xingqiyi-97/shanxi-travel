@@ -456,6 +456,67 @@ body { background: #c8b89a; }
 .username-modal input { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 9px 12px; font-size: 14px; margin-bottom: 12px; font-family: inherit; }
 .username-modal .uname-btn { width: 100%; background: #3a7a3a; color: #fff; border: none; border-radius: 12px; padding: 10px; font-size: 14px; cursor: pointer; }
 
+
+/* 全局行程按钮 */
+.global-plan-btn {
+  position: fixed; bottom: 28px; right: 20px; z-index: 50;
+  background: #3a7a3a; color: #fff;
+  border: none; border-radius: 28px;
+  padding: 12px 20px; font-size: 14px; font-weight: 700;
+  box-shadow: 0 4px 16px rgba(58,122,58,.4);
+  cursor: pointer; display: none; align-items: center; gap: 8px;
+  transition: transform .15s;
+}
+.global-plan-btn:active { transform: scale(.96); }
+.global-plan-badge {
+  background: #ff5a5a; color: #fff;
+  border-radius: 10px; padding: 1px 7px; font-size: 12px;
+}
+
+/* 行程信息收集弹窗 */
+.plan-form-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  z-index: 250; display: none; align-items: flex-end; justify-content: center;
+}
+.plan-form-overlay.open { display: flex; }
+.plan-form-modal {
+  background: #fff; border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 480px; padding: 24px 20px 40px;
+}
+.plan-form-title { font-size: 17px; font-weight: 700; margin-bottom: 20px; color: #1a2a1a; }
+.plan-form-row { margin-bottom: 14px; }
+.plan-form-label { font-size: 13px; color: #666; margin-bottom: 6px; display: block; }
+.plan-form-input {
+  width: 100%; border: 1px solid #ddd; border-radius: 10px;
+  padding: 10px 14px; font-size: 14px; font-family: inherit;
+}
+.plan-form-submit {
+  width: 100%; background: #3a7a3a; color: #fff; border: none;
+  border-radius: 16px; padding: 13px; font-size: 15px;
+  font-weight: 600; cursor: pointer; margin-top: 8px;
+}
+.plan-form-close {
+  float: right; background: none; border: none;
+  font-size: 20px; cursor: pointer; color: #888; margin-top: -4px;
+}
+
+/* AI 行程表格 */
+.ai-table-wrap { overflow-x: auto; }
+.ai-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  margin-top: 8px;
+}
+.ai-table th {
+  background: #3a7a3a; color: #fff;
+  padding: 9px 12px; text-align: left; font-weight: 600;
+}
+.ai-table td {
+  padding: 9px 12px; border-bottom: 1px solid #f0f0f0;
+  vertical-align: top; line-height: 1.6;
+}
+.ai-table tr:nth-child(even) td { background: #f8fbf8; }
+.ai-table tr:first-child td { font-weight: 600; }
+
 </style>
 </head>
 <body>
@@ -613,15 +674,7 @@ body { background: #c8b89a; }
     <span>☑</span><span>勾选想去的地方，底部可一键生成 AI 行程</span>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
-  <div class="ai-bar">
-    <select class="days-select" id="daysSelect">
-      <option value="1">1天</option>
-      <option value="2" selected>2天</option>
-      <option value="3">3天</option>
-      <option value="4">4天</option>
-    </select>
-    <button class="ai-btn" id="aiBtn" onclick="generateItinerary()">✨ AI生成行程</button>
-  </div>
+
   <div style="padding:0 16px 16px" id="commentSection"></div>
 </div>
 
@@ -783,6 +836,7 @@ function renderDrawerItems(cityKey, city) {
     if (checkedItems[key]) { delete checkedItems[key]; el.classList.remove('checked'); }
     else { checkedItems[key] = true; el.classList.add('checked'); }
     localStorage.setItem('shanxi_checked', JSON.stringify(checkedItems));
+    updateGlobalBadge();
   };
 }
 
@@ -879,53 +933,139 @@ function submitComment() {
     .catch(function() { if (btn) btn.disabled = false; alert('网络错误，请重试'); });
 }
 
-/* ========== AI 行程 ========== */
-function generateItinerary() {
-  var city = drawerData[currentCityKey];
-  var checked = [];
-  function collect(items, sec) {
-    if (!items) return;
-    items.forEach(function(item) {
-      if (checkedItems[ckKey(currentCityKey, sec, item.name)]) checked.push(item.name);
-    });
+/* ========== 全局勾选统计 ========== */
+function updateGlobalBadge() {
+  var total = Object.keys(checkedItems).length;
+  var btn = document.getElementById('globalPlanBtn');
+  var badge = document.getElementById('globalBadge');
+  if (total > 0) {
+    btn.style.display = 'flex';
+    badge.textContent = total;
+  } else {
+    btn.style.display = 'none';
   }
-  collect(city.food, 'food');
-  collect(city.play, 'play');
-  collect(city.stay, 'stay');
-  collect(city.buy, 'buy');
-  if (!checked.length) { alert('请先勾选想去的地方和想吃的东西～'); return; }
+}
 
-  var days = document.getElementById('daysSelect').value;
-  document.getElementById('aiModalTitle').textContent = currentCityName + ' ' + days + '日行程';
-  document.getElementById('aiModalBody').textContent = '🤔 AI规划中，请稍候...';
+/* ========== 行程信息收集弹窗 ========== */
+function openPlanForm() {
+  // 统计已勾选的城市和内容
+  var cityItems = {};
+  Object.keys(checkedItems).forEach(function(key) {
+    var parts = key.split(':');
+    var city = parts[0]; var name = parts[2];
+    if (!cityItems[city]) cityItems[city] = [];
+    cityItems[city].push(name);
+  });
+  var cityNames = { datong:'大同', xinzhou:'忻州', taiyuan:'太原', linfen:'临汾', yuncheng:'运城' };
+  var summary = '已选：';
+  Object.keys(cityItems).forEach(function(c) {
+    summary += (cityNames[c] || c) + '(' + cityItems[c].length + '项) ';
+  });
+  document.getElementById('pfSelectedSummary').textContent = summary;
+  // 默认日期设为今天
+  if (!document.getElementById('pfDate').value) {
+    var d = new Date(); var mm = ('0'+(d.getMonth()+1)).slice(-2); var dd = ('0'+d.getDate()).slice(-2);
+    document.getElementById('pfDate').value = d.getFullYear()+'-'+mm+'-'+dd;
+  }
+  document.getElementById('planFormOverlay').classList.add('open');
+}
+function closePlanForm() {
+  document.getElementById('planFormOverlay').classList.remove('open');
+}
+
+/* ========== AI 生成全局行程 ========== */
+function generateGlobalItinerary() {
+  var origin = document.getElementById('pfOrigin').value.trim();
+  var date = document.getElementById('pfDate').value;
+  var days = parseInt(document.getElementById('pfDays').value) || 3;
+  if (!origin) { alert('请填写出发地'); return; }
+  if (!date) { alert('请选择出发日期'); return; }
+
+  // 按城市整理勾选内容
+  var cityItems = {};
+  var cityOrder = ['datong','xinzhou','taiyuan','linfen','yuncheng'];
+  var cityNames = { datong:'大同', xinzhou:'忻州', taiyuan:'太原', linfen:'临汾', yuncheng:'运城' };
+  Object.keys(checkedItems).forEach(function(key) {
+    var parts = key.split(':'); var city = parts[0]; var name = parts[2];
+    if (!cityItems[city]) cityItems[city] = [];
+    cityItems[city].push(name);
+  });
+
+  var cityList = cityOrder.filter(function(c) { return cityItems[c] && cityItems[c].length; });
+  if (!cityList.length) { alert('请先勾选想去的地方～'); return; }
+
+  var itemDesc = cityList.map(function(c) {
+    return cityNames[c] + '：' + cityItems[c].join('、');
+  }).join('；');
+
+  closePlanForm();
+  document.getElementById('aiModalTitle').textContent = '✨ AI 行程规划';
+  document.getElementById('aiModalBody').innerHTML = '<div style="color:#888;padding:20px 0;text-align:center">🤔 AI规划中，通常需要10秒左右...</div>';
   document.getElementById('aiModalOverlay').classList.add('open');
-  var btn = document.getElementById('aiBtn');
-  btn.disabled = true;
 
-  var prompt = '你是一个专业的山西旅行规划师。用户计划去' + currentCityName + '旅行' + days + '天，已选择以下攻略内容：' + checked.join('、') + '。\n\n请根据这些内容，生成一份实用的' + days + '日行程安排，要求：\n1. 按天分组，每天安排合理（不要塞太满）\n2. 考虑地理位置，减少无谓奔波\n3. 每个景点/餐厅给出简短建议（时间/注意事项）\n4. 语言简洁，像朋友推荐那种口吻';
+  var dateStr = date.replace(/-/g, '/');
+  var prompt = '你是一个专业的山西旅行规划师。请根据以下信息，生成一份详细的行程安排表格：
+
+出发地：' + origin + '
+出发日期：' + dateStr + '
+总天数：' + days + '天
+已选目的地和内容：' + itemDesc + '
+
+要求：
+1. 输出为Markdown表格，列为：日期、时间段、地点/城市、活动内容、贴士
+2. 时间段分为：上午/中午/下午/晚上
+3. 合理安排交通衔接，注明城市间距离和交通方式
+4. 每个活动给出1句实用贴士
+5. 语言简洁口语化
+6. 只输出表格，不要其他多余内容';
+
   fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + DEEPSEEK_KEY
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DEEPSEEK_KEY },
     body: JSON.stringify({
       model: 'deepseek-chat',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1500,
-      temperature: 0.7
+      max_tokens: 2000, temperature: 0.7
     })
   }).then(function(r) { return r.json(); })
     .then(function(d) {
-      btn.disabled = false;
-      var result = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-      document.getElementById('aiModalBody').textContent = result || '生成失败，请重试';
+      var md = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+      if (!md) { document.getElementById('aiModalBody').textContent = '生成失败，请重试'; return; }
+      document.getElementById('aiModalBody').innerHTML = markdownTableToHtml(md);
     })
     .catch(function() {
-      btn.disabled = false;
       document.getElementById('aiModalBody').textContent = '网络错误，请重试';
     });
 }
+
+/* ========== Markdown 表格 → HTML 表格 ========== */
+function markdownTableToHtml(md) {
+  var lines = md.trim().split('\n');
+  var tableLines = [];
+  var preLines = [];
+  var inTable = false;
+  lines.forEach(function(line) {
+    if (line.trim().startsWith('|')) { inTable = true; tableLines.push(line); }
+    else if (!inTable) { preLines.push(line); }
+  });
+  if (!tableLines.length) return '<pre style="white-space:pre-wrap;font-size:13px">' + md + '</pre>';
+
+  var rows = tableLines.filter(function(l) { return !/^[\s|:-]+$/.test(l); });
+  var html = '<div class="ai-table-wrap"><table class="ai-table">';
+  rows.forEach(function(row, i) {
+    var cells = row.split('|').filter(function(c,idx,arr) { return idx > 0 && idx < arr.length-1; });
+    html += '<tr>';
+    cells.forEach(function(cell) {
+      var tag = i === 0 ? 'th' : 'td';
+      html += '<' + tag + '>' + cell.trim() + '</' + tag + '>';
+    });
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  if (preLines.length) html = '<p style="font-size:13px;color:#555;margin-bottom:8px">' + preLines.join('<br>') + '</p>' + html;
+  return html;
+}
+
 function closeAiModal() {
   document.getElementById('aiModalOverlay').classList.remove('open');
 }
@@ -955,6 +1095,7 @@ function closeDrawer() {
 
 /* ========== 触摸滑动关闭 ========== */
 var startY = 0;
+updateGlobalBadge();
 document.getElementById('drawer').addEventListener('touchstart', function(e) {
   startY = e.touches[0].clientY;
 });
@@ -981,5 +1122,33 @@ document.getElementById('drawer').addEventListener('touchend', function(e) {
     <button class="uname-btn" onclick="saveUsername()">确定</button>
   </div>
 </div>
+
+<!-- 全局行程规划按钮 -->
+<button class="global-plan-btn" id="globalPlanBtn" onclick="openPlanForm()">
+  ✨ 生成行程 <span class="global-plan-badge" id="globalBadge">0</span>
+</button>
+
+<!-- 行程信息收集弹窗 -->
+<div class="plan-form-overlay" id="planFormOverlay">
+  <div class="plan-form-modal">
+    <button class="plan-form-close" onclick="closePlanForm()">✕</button>
+    <div class="plan-form-title">📋 填写行程信息</div>
+    <div class="plan-form-row">
+      <label class="plan-form-label">出发地</label>
+      <input class="plan-form-input" id="pfOrigin" placeholder="例如：北京、上海">
+    </div>
+    <div class="plan-form-row">
+      <label class="plan-form-label">出发日期</label>
+      <input class="plan-form-input" id="pfDate" type="date">
+    </div>
+    <div class="plan-form-row">
+      <label class="plan-form-label">总停留天数</label>
+      <input class="plan-form-input" id="pfDays" type="number" min="1" max="14" value="3" placeholder="天">
+    </div>
+    <div id="pfSelectedSummary" style="font-size:12px;color:#888;margin-bottom:12px"></div>
+    <button class="plan-form-submit" onclick="generateGlobalItinerary()">✨ 开始生成行程</button>
+  </div>
+</div>
+
 </body>
 </html>
