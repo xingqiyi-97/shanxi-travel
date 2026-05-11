@@ -733,7 +733,8 @@ const drawerData = {
 };
 
 /* ========== 状态 ========== */
-var WORKER = 'https://shanxi-travel-api.xingqiyi.workers.dev';
+var SUPABASE_URL = 'https://eptyoxqgwpgjfpfhmqgi.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_z-6Rva9F75H3mzvgp9TEwA_9dKa7IwE';
 var currentCityKey = '';
 var currentCityName = '';
 var checkedItems = JSON.parse(localStorage.getItem('shanxi_checked') || '{}');
@@ -810,18 +811,19 @@ function renderComments(cityKey) {
 function loadCommentList(cityKey) {
   var list = document.getElementById('commentList');
   if (!list) return;
-  var controller = new AbortController();
-  var timer = setTimeout(function() { controller.abort(); }, 8000);
-  fetch(WORKER + '/comments?city=' + cityKey, { signal: controller.signal })
-    .then(function(r) { clearTimeout(timer); return r.json(); })
+  fetch(SUPABASE_URL + '/rest/v1/comments?city=eq.' + encodeURIComponent(cityKey) + '&order=created_at.desc&limit=50', {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  })
+    .then(function(r) { return r.json(); })
     .then(function(comments) {
+      list = document.getElementById('commentList');
       if (!list) return;
       if (!comments.length) {
         list.innerHTML = '<div style="color:#bbb;font-size:12px;padding:4px 0 8px">还没有留言，来第一个吧～</div>';
       } else {
         var html = '';
         comments.forEach(function(c) {
-          var t = new Date(c.time);
+          var t = new Date(c.created_at);
           var ts = (t.getMonth()+1) + '月' + t.getDate() + '日';
           html += '<div class="comment-card"><div class="comment-meta"><b>' + c.username + '</b>  ' + ts + '</div>';
           html += '<div class="comment-text">' + c.content.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div></div>';
@@ -829,8 +831,9 @@ function loadCommentList(cityKey) {
         list.innerHTML = html;
       }
     })
-    .catch(function(e) {
-      if (list) list.innerHTML = '<div style="color:#aaa;font-size:12px;padding:4px 0 8px">历史留言加载失败</div>';
+    .catch(function() {
+      list = document.getElementById('commentList');
+      if (list) list.innerHTML = '<div style="color:#aaa;font-size:12px;padding:4px 0 8px">留言加载失败，请刷新重试</div>';
     });
 }
 
@@ -850,19 +853,29 @@ function saveUsername() {
 function submitComment() {
   var ta = document.getElementById('commentText');
   if (!ta || !ta.value.trim()) return;
-  var content = ta.value.trim();
-  var btn = document.querySelector('.comment-submit');
+  var txt = ta.value.trim();
+  if (txt.length > 500) { alert('留言不能超过500字'); return; }
+  var btn = document.getElementById('commentSubmitBtn');
   if (btn) btn.disabled = true;
-  fetch(WORKER + '/comments', {
+  fetch(SUPABASE_URL + '/rest/v1/comments', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ city: currentCityKey, username: username, content: content })
-  }).then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.ok) { document.getElementById('commentText').value = ''; loadCommentList(currentCityKey); }
-      else { alert(d.error || '发布失败'); if (btn) btn.disabled = false; }
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ city: currentCityKey, username: username, content: txt })
+  }).then(function(r) {
+      if (btn) btn.disabled = false;
+      if (r.ok) {
+        document.getElementById('commentText').value = '';
+        loadCommentList(currentCityKey);
+      } else {
+        r.text().then(function(e) { alert('发布失败：' + e); });
+      }
     })
-    .catch(function() { alert('网络错误，请重试'); if (btn) btn.disabled = false; });
+    .catch(function() { if (btn) btn.disabled = false; alert('网络错误，请重试'); });
 }
 
 /* ========== AI 行程 ========== */
@@ -888,7 +901,7 @@ function generateItinerary() {
   var btn = document.getElementById('aiBtn');
   btn.disabled = true;
 
-  fetch(WORKER + '/ai/itinerary', {
+  fetch('https://shanxi-travel-api.xingqiyi.workers.dev/ai/itinerary', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ city: currentCityName, items: checked, days: parseInt(days) })
