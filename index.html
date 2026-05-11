@@ -409,12 +409,24 @@ body { background: #c8b89a; }
 .route-area { overflow: hidden; }
 
 /* ===== 勾选 / 留言 / AI 行程 ===== */
-.drawer-item { position: relative; cursor: pointer; user-select: none; }
+.drawer-item {
+  position: relative; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 10px;
+  transition: background .15s;
+}
 .drawer-item.checked { background: #e6f4e6; }
-.drawer-item { transition: background .15s; }
 .drawer-item:active { background: #f0f4f0; }
-.check-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; font-weight: bold; opacity: 0; transition: opacity .15s; color: #3a7a3a; }
-.drawer-item.checked { padding-right: 32px; }
+.drawer-item-text { flex: 1; }
+.check-icon {
+  width: 20px; height: 20px; flex-shrink: 0;
+  border: 2px solid #ccc; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: transparent; transition: all .15s;
+  background: #fff;
+}
+.drawer-item.checked .check-icon {
+  border-color: #3a7a3a; background: #3a7a3a; color: #fff;
+}
 .drawer-item.checked .check-icon { opacity: 1; }
 .ai-bar { position: sticky; bottom: 0; background: #fff; padding: 10px 16px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; z-index: 10; }
 .ai-btn { flex: 1; background: #3a7a3a; color: #fff; border: none; border-radius: 20px; padding: 10px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -598,7 +610,7 @@ body { background: #c8b89a; }
     <button class="drawer-close" onclick="closeDrawer()">✕</button>
   </div>
   <div style="background:#f0f7f0;padding:8px 20px;font-size:12px;color:#5a8a5a;display:flex;align-items:center;gap:6px">
-    <span>👆</span><span>点击条目可勾选，勾选后可生成专属行程</span>
+    <span>☑</span><span>勾选想去的地方，底部可一键生成 AI 行程</span>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
   <div class="ai-bar">
@@ -747,8 +759,7 @@ function renderSection(cityKey, icon, label, items, section) {
     var cls = checkedItems[key] ? ' checked' : '';
     s += '<div class="drawer-item' + cls + '" data-city="' + cityKey + '" data-section="' + section + '" data-name="' + item.name.replace(/"/g,'&quot;') + '">';
     s += '<span class="check-icon">✓</span>';
-    s += item.name;
-    if (item.note) s += '<span class="item-note">' + item.note + '</span>';
+    s += '<div class="drawer-item-text">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
     s += '</div>';
   });
   return s;
@@ -776,35 +787,50 @@ function renderDrawerItems(cityKey, city) {
 /* ========== 留言 ========== */
 function renderComments(cityKey) {
   var section = document.getElementById('commentSection');
-  section.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0 4px">加载留言中...</div>';
+
+  // 立即渲染输入框，不等网络
+  function buildForm() {
+    var html = '<div class="comment-section-title">💬 旅行者留言</div>';
+    html += '<div id="commentList"><div style="color:#aaa;font-size:12px;padding:4px 0 8px">留言加载中...</div></div>';
+    if (username) {
+      html += '<textarea class="comment-input" id="commentText" rows="3" placeholder="分享你的旅行经验..."></textarea>';
+      html += '<button class="comment-submit" id="commentSubmitBtn" onclick="submitComment()">发布</button>';
+      html += '<div style="clear:both;font-size:11px;color:#bbb;margin-top:8px">昵称：' + username + ' <span style="color:#3a7a3a;cursor:pointer" onclick="showUsernameModal()">修改</span></div>';
+    } else {
+      html += '<div class="login-bar">设置昵称后可以留言<button class="login-btn" onclick="showUsernameModal()">设置昵称</button></div>';
+    }
+    return html;
+  }
+  section.innerHTML = buildForm();
+
+  // 异步加载历史留言
+  loadCommentList(cityKey);
+}
+
+function loadCommentList(cityKey) {
+  var list = document.getElementById('commentList');
+  if (!list) return;
   var controller = new AbortController();
   var timer = setTimeout(function() { controller.abort(); }, 8000);
   fetch(WORKER + '/comments?city=' + cityKey, { signal: controller.signal })
     .then(function(r) { clearTimeout(timer); return r.json(); })
     .then(function(comments) {
-      var html = '<div class="comment-section-title">💬 旅行者留言</div>';
+      if (!list) return;
       if (!comments.length) {
-        html += '<div style="color:#bbb;font-size:12px;padding:4px 0 8px">还没有留言，来第一个吧～</div>';
+        list.innerHTML = '<div style="color:#bbb;font-size:12px;padding:4px 0 8px">还没有留言，来第一个吧～</div>';
       } else {
+        var html = '';
         comments.forEach(function(c) {
           var t = new Date(c.time);
           var ts = (t.getMonth()+1) + '月' + t.getDate() + '日';
           html += '<div class="comment-card"><div class="comment-meta"><b>' + c.username + '</b>  ' + ts + '</div>';
           html += '<div class="comment-text">' + c.content.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div></div>';
         });
+        list.innerHTML = html;
       }
-      if (username) {
-        html += '<textarea class="comment-input" id="commentText" rows="3" placeholder="分享你的旅行经验..."></textarea>';
-        html += '<button class="comment-submit" onclick="submitComment()">发布留言</button>';
-        html += '<div style="clear:both;font-size:11px;color:#bbb;margin-top:8px">昵称：' + username + '  <span style="color:#3a7a3a;cursor:pointer" onclick="showUsernameModal()">修改</span></div>';
-      } else {
-        html += '<div class="login-bar">设置昵称后可以留言<button class="login-btn" onclick="showUsernameModal()">设置昵称</button></div>';
-      }
-      section.innerHTML = html;
     })
     .catch(function(e) {
-      var msg = e.name === 'AbortError' ? '留言加载超时，请稍后重试' : '留言功能暂不可用';
-      section.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">' + msg + '</div>';
+      if (list) list.innerHTML = '<div style="color:#aaa;font-size:12px;padding:4px 0 8px">历史留言加载失败</div>';
     });
 }
 
@@ -833,7 +859,7 @@ function submitComment() {
     body: JSON.stringify({ city: currentCityKey, username: username, content: content })
   }).then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.ok) renderComments(currentCityKey);
+      if (d.ok) { document.getElementById('commentText').value = ''; loadCommentList(currentCityKey); }
       else { alert(d.error || '发布失败'); if (btn) btn.disabled = false; }
     })
     .catch(function() { alert('网络错误，请重试'); if (btn) btn.disabled = false; });
