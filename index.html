@@ -500,22 +500,8 @@ body { background: #c8b89a; }
   font-size: 20px; cursor: pointer; color: #888; margin-top: -4px;
 }
 
-/* AI 行程表格 */
-.ai-table-wrap { overflow-x: auto; }
-.ai-table {
-  width: 100%; border-collapse: collapse; font-size: 13px;
-  margin-top: 8px;
-}
-.ai-table th {
-  background: #3a7a3a; color: #fff;
-  padding: 9px 12px; text-align: left; font-weight: 600;
-}
-.ai-table td {
-  padding: 9px 12px; border-bottom: 1px solid #f0f0f0;
-  vertical-align: top; line-height: 1.6;
-}
-.ai-table tr:nth-child(even) td { background: #f8fbf8; }
-.ai-table tr:first-child td { font-weight: 600; }
+/* AI 行程弹窗滚动 */
+.ai-modal-body { overflow-y: auto; max-height: 65vh; padding-bottom: 8px; }
 
 </style>
 </head>
@@ -1029,40 +1015,65 @@ function generateGlobalItinerary() {
     })
   }).then(function(r) { return r.json(); })
     .then(function(d) {
-      var md = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-      if (!md) { document.getElementById('aiModalBody').textContent = '生成失败，请重试'; return; }
-      document.getElementById('aiModalBody').innerHTML = markdownTableToHtml(md);
+      var raw = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+      if (!raw) { document.getElementById('aiModalBody').textContent = '生成失败，请重试'; return; }
+      try {
+        // 提取 JSON（去掉可能的 ```json ``` 包裹）
+        var jsonStr = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+        var plan = JSON.parse(jsonStr);
+        document.getElementById('aiModalBody').innerHTML = renderPlanCards(plan);
+      } catch(e) {
+        // fallback: 直接显示文本
+        document.getElementById('aiModalBody').innerHTML = '<pre style="white-space:pre-wrap;font-size:13px;line-height:1.7">' + raw + '</pre>';
+      }
     })
     .catch(function() {
       document.getElementById('aiModalBody').textContent = '网络错误，请重试';
     });
 }
 
-/* ========== Markdown 表格 → HTML 表格 ========== */
-function markdownTableToHtml(md) {
-  var lines = md.trim().split('\n');
-  var tableLines = [];
-  var preLines = [];
-  var inTable = false;
-  lines.forEach(function(line) {
-    if (line.trim().startsWith('|')) { inTable = true; tableLines.push(line); }
-    else if (!inTable) { preLines.push(line); }
+/* ========== 渲染行程卡片 ========== */
+function renderPlanCards(plan) {
+  var dayColors = ['#4a7a4a','#5a6fa8','#a06a3a','#7a4a8a','#3a7a7a'];
+  var timeColors = { '上午':'#fff8e8','中午':'#fff0e8','下午':'#e8f4ff','晚上':'#f0e8ff','交通':'#f0f0f0' };
+  var html = '<div style="padding:4px 0">';
+  plan.forEach(function(day, di) {
+    var color = dayColors[di % dayColors.length];
+    html += '<div style="margin-bottom:20px">';
+    // 天标题
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+    html += '<div style="background:' + color + ';color:#fff;border-radius:20px;padding:4px 14px;font-size:13px;font-weight:700">Day ' + day.day + ' · ' + (day.date||'') + '</div>';
+    html += '<div style="font-size:13px;color:#555;flex:1">' + (day.city||'') + '</div>';
+    html += '</div>';
+    // 主题
+    if (day.theme) html += '<div style="font-size:12px;color:#888;margin:-6px 0 10px 4px">✦ ' + day.theme + '</div>';
+    // 时间段
+    if (day.slots) {
+      day.slots.forEach(function(slot) {
+        var bg = timeColors[slot.time] || '#f8f8f8';
+        var isTransport = slot.time === '交通';
+        html += '<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">';
+        // 时间轴点
+        html += '<div style="display:flex;flex-direction:column;align-items:center;padding-top:3px">';
+        html += '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0"></div>';
+        html += '<div style="width:2px;flex:1;background:#e0e0e0;margin-top:3px;min-height:24px"></div>';
+        html += '</div>';
+        // 卡片
+        html += '<div style="flex:1;background:' + bg + ';border-radius:12px;padding:10px 12px;margin-bottom:0">';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+        html += '<span style="font-size:18px">' + (slot.icon||'📍') + '</span>';
+        html += '<span style="font-size:14px;font-weight:600;color:#222">' + (slot.title||'') + '</span>';
+        html += '<span style="margin-left:auto;font-size:11px;color:#999;background:#fff;border-radius:8px;padding:1px 7px">' + (slot.time||'') + '</span>';
+        html += '</div>';
+        if (slot.desc) html += '<div style="font-size:13px;color:#444;line-height:1.6;margin-bottom:4px">' + slot.desc + '</div>';
+        if (slot.tip) html += '<div style="font-size:11px;color:#888;background:rgba(0,0,0,.04);border-radius:6px;padding:4px 8px">💡 ' + slot.tip + '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+    }
+    html += '</div>';
   });
-  if (!tableLines.length) return '<pre style="white-space:pre-wrap;font-size:13px">' + md + '</pre>';
-
-  var rows = tableLines.filter(function(l) { return !/^[\s|:-]+$/.test(l); });
-  var html = '<div class="ai-table-wrap"><table class="ai-table">';
-  rows.forEach(function(row, i) {
-    var cells = row.split('|').filter(function(c,idx,arr) { return idx > 0 && idx < arr.length-1; });
-    html += '<tr>';
-    cells.forEach(function(cell) {
-      var tag = i === 0 ? 'th' : 'td';
-      html += '<' + tag + '>' + cell.trim() + '</' + tag + '>';
-    });
-    html += '</tr>';
-  });
-  html += '</table></div>';
-  if (preLines.length) html = '<p style="font-size:13px;color:#555;margin-bottom:8px">' + preLines.join('<br>') + '</p>' + html;
+  html += '</div>';
   return html;
 }
 
