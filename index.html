@@ -739,7 +739,7 @@ function renderSection(cityKey, icon, label, items, section) {
   items.forEach(function(item) {
     var key = ckKey(cityKey, section, item.name);
     var cls = checkedItems[key] ? ' checked' : '';
-    s += '<div class="drawer-item' + cls + '" onclick="toggleCheck(\'' + cityKey + '\',\'' + section + '\',' + JSON.stringify(item.name) + ',this)">';
+    s += '<div class="drawer-item' + cls + '" data-city="' + cityKey + '" data-section="' + section + '" data-name="' + item.name.replace(/"/g,'&quot;') + '">';
     s += '<span class="check-icon">✓</span>';
     s += item.name;
     if (item.note) s += '<span class="item-note">' + item.note + '</span>';
@@ -754,6 +754,17 @@ function renderDrawerItems(cityKey, city) {
   html += renderSection(cityKey, '🏨', '住', city.stay, 'stay');
   html += renderSection(cityKey, '🛍', '买', city.buy, 'buy');
   document.getElementById('drawerBody').innerHTML = html;
+  document.getElementById('drawerBody').onclick = function(e) {
+    var el = e.target.closest('.drawer-item');
+    if (!el) return;
+    var city = el.dataset.city;
+    var section = el.dataset.section;
+    var name = el.dataset.name;
+    var key = city + ':' + section + ':' + name;
+    if (checkedItems[key]) { delete checkedItems[key]; el.classList.remove('checked'); }
+    else { checkedItems[key] = true; el.classList.add('checked'); }
+    localStorage.setItem('shanxi_checked', JSON.stringify(checkedItems));
+  };
 }
 
 /* ========== 留言 ========== */
