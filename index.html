@@ -739,8 +739,7 @@ function renderSection(cityKey, icon, label, items, section) {
   items.forEach(function(item) {
     var key = ckKey(cityKey, section, item.name);
     var cls = checkedItems[key] ? ' checked' : '';
-    var safeName = item.name.replace(/\/g,'\\').replace(/'/g,"\'");
-    s += '<div class="drawer-item' + cls + '" onclick="toggleCheck('' + cityKey + '','' + section + '','' + safeName + '',this)">';
+    s += '<div class="drawer-item' + cls + '" onclick="toggleCheck(\'' + cityKey + '\',\'' + section + '\',' + JSON.stringify(item.name) + ',this)">';
     s += '<span class="check-icon">✓</span>';
     s += item.name;
     if (item.note) s += '<span class="item-note">' + item.note + '</span>';
