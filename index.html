@@ -735,6 +735,7 @@ const drawerData = {
 /* ========== 状态 ========== */
 var SUPABASE_URL = 'https://eptyoxqgwpgjfpfhmqgi.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_z-6Rva9F75H3mzvgp9TEwA_9dKa7IwE';
+var DEEPSEEK_KEY = 'sk-99dcae7b1be2436dbe16e254b227ae16';
 var currentCityKey = '';
 var currentCityName = '';
 var checkedItems = JSON.parse(localStorage.getItem('shanxi_checked') || '{}');
@@ -901,14 +902,24 @@ function generateItinerary() {
   var btn = document.getElementById('aiBtn');
   btn.disabled = true;
 
-  fetch('https://shanxi-travel-api.xingqiyi.workers.dev/ai/itinerary', {
+  var prompt = '你是一个专业的山西旅行规划师。用户计划去' + currentCityName + '旅行' + days + '天，已选择以下攻略内容：' + checked.join('、') + '。\n\n请根据这些内容，生成一份实用的' + days + '日行程安排，要求：\n1. 按天分组，每天安排合理（不要塞太满）\n2. 考虑地理位置，减少无谓奔波\n3. 每个景点/餐厅给出简短建议（时间/注意事项）\n4. 语言简洁，像朋友推荐那种口吻';
+  fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ city: currentCityName, items: checked, days: parseInt(days) })
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + DEEPSEEK_KEY
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1500,
+      temperature: 0.7
+    })
   }).then(function(r) { return r.json(); })
     .then(function(d) {
       btn.disabled = false;
-      document.getElementById('aiModalBody').textContent = d.ok ? d.itinerary : ('生成失败：' + (d.error || '未知错误'));
+      var result = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+      document.getElementById('aiModalBody').textContent = result || '生成失败，请重试';
     })
     .catch(function() {
       btn.disabled = false;
