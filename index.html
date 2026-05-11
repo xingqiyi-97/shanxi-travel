@@ -407,6 +407,108 @@ body {
 body { background: #c8b89a; }
 .map-wrap { contain: layout; isolation: isolate; }
 .route-area { overflow: hidden; }
+
+/* ===== 勾选 / 留言 / AI 行程 新增样式 ===== */
+.drawer-item { position: relative; cursor: pointer; user-select: none; }
+.drawer-item.checked { background: #e6f4e6; }
+.drawer-item .check-icon {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 16px; opacity: 0; transition: opacity .2s;
+}
+.drawer-item.checked .check-icon { opacity: 1; }
+
+/* 底部 AI 行程按钮 */
+.ai-bar {
+  position: sticky; bottom: 0;
+  background: #fff;
+  padding: 12px 16px 20px;
+  border-top: 1px solid #f0f0f0;
+  display: flex; gap: 8px;
+}
+.ai-btn {
+  flex: 1; background: #3a7a3a; color: #fff;
+  border: none; border-radius: 20px; padding: 10px 0;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.ai-btn:disabled { background: #aaa; cursor: not-allowed; }
+.days-select {
+  border: 1px solid #ddd; border-radius: 20px; padding: 8px 12px;
+  font-size: 13px; background: #f8f8f8; cursor: pointer;
+}
+
+/* 留言区 */
+.comment-section { padding: 0 0 16px; }
+.comment-section-title {
+  font-size: 13px; font-weight: 700; color: #888;
+  letter-spacing: .5px; margin: 16px 0 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.comment-section-title::after { content: ''; flex: 1; height: 1px; background: #f0f0f0; }
+.comment-card {
+  background: #f8f9f8; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px;
+}
+.comment-meta { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+.comment-meta b { color: #555; }
+.comment-text { font-size: 13px; color: #333; line-height: 1.6; }
+.comment-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.comment-input {
+  border: 1px solid #ddd; border-radius: 10px; padding: 8px 12px;
+  font-size: 13px; resize: none; font-family: inherit;
+}
+.comment-submit {
+  align-self: flex-end; background: #3a7a3a; color: #fff;
+  border: none; border-radius: 16px; padding: 7px 20px;
+  font-size: 13px; cursor: pointer;
+}
+.login-bar {
+  background: #f0f4f0; border-radius: 10px; padding: 10px 14px;
+  font-size: 13px; color: #555; display: flex; align-items: center; justify-content: space-between;
+}
+.login-btn {
+  background: #3a7a3a; color: #fff; border: none; border-radius: 12px;
+  padding: 5px 14px; font-size: 12px; cursor: pointer;
+}
+
+/* AI 行程弹窗 */
+.ai-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200;
+  display: none; align-items: flex-end; justify-content: center;
+}
+.ai-modal-overlay.open { display: flex; }
+.ai-modal {
+  background: #fff; border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 480px; max-height: 80vh;
+  overflow-y: auto; padding: 20px 20px 40px;
+}
+.ai-modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #1a2a1a; }
+.ai-modal-body { font-size: 13px; line-height: 1.8; color: #333; white-space: pre-wrap; }
+.ai-modal-close {
+  float: right; background: none; border: none; font-size: 20px;
+  cursor: pointer; color: #888; margin-top: -4px;
+}
+
+/* 用户名弹窗 */
+.username-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 300;
+  display: none; align-items: center; justify-content: center;
+}
+.username-modal-overlay.open { display: flex; }
+.username-modal {
+  background: #fff; border-radius: 16px; padding: 24px 20px;
+  width: 280px; text-align: center;
+}
+.username-modal h3 { font-size: 16px; margin-bottom: 8px; }
+.username-modal p { font-size: 12px; color: #888; margin-bottom: 16px; }
+.username-modal input {
+  width: 100%; border: 1px solid #ddd; border-radius: 10px;
+  padding: 9px 12px; font-size: 14px; margin-bottom: 12px;
+  font-family: inherit;
+}
+.username-modal button {
+  width: 100%; background: #3a7a3a; color: #fff; border: none;
+  border-radius: 12px; padding: 10px; font-size: 14px; cursor: pointer;
+}
+
 </style>
 </head>
 <body>
@@ -561,6 +663,16 @@ body { background: #c8b89a; }
     <button class="drawer-close" onclick="closeDrawer()">✕</button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
+  <div class="ai-bar">
+    <select class="days-select" id="daysSelect">
+      <option value="1">1天</option>
+      <option value="2" selected>2天</option>
+      <option value="3">3天</option>
+      <option value="4">4天</option>
+    </select>
+    <button class="ai-btn" id="aiBtn" onclick="generateItinerary()">✨ AI生成行程</button>
+  </div>
+  <div style="padding:0 16px 16px" id="commentSection"></div>
 </div>
 
 <script>
@@ -677,41 +789,18 @@ const drawerData = {
 function openDrawer(cityKey) {
   var city = drawerData[cityKey];
   if (!city) return;
+  currentCityKey = cityKey;
+  currentCityName = city.name;
   document.getElementById('drawerName').textContent = city.name;
   document.getElementById('drawerName').style.color = city.color;
   var icon = document.getElementById('drawerIcon');
-  // emoji mapping
   var icons = { datong: '🏛', xinzhou: '🏔', taiyuan: '🔪', linfen: '💧', yuncheng: '🧂' };
   var bgs   = { datong: '#fff4ef', xinzhou: '#eff6ff', taiyuan: '#fffbef', linfen: '#f5f0ff', yuncheng: '#fff0f4' };
   icon.textContent = icons[cityKey] || '📍';
   icon.style.background = bgs[cityKey] || '#f5f5f5';
 
-  var html = '';
-  if (city.food && city.food.length) {
-    html += '<div class="drawer-section-title">🍜 吃</div>';
-    city.food.forEach(function(item) {
-      html += '<div class="drawer-item">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
-    });
-  }
-  if (city.play && city.play.length) {
-    html += '<div class="drawer-section-title">🗺 游</div>';
-    city.play.forEach(function(item) {
-      html += '<div class="drawer-item">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
-    });
-  }
-  if (city.stay && city.stay.length) {
-    html += '<div class="drawer-section-title">🏨 住</div>';
-    city.stay.forEach(function(item) {
-      html += '<div class="drawer-item">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
-    });
-  }
-  if (city.buy && city.buy.length) {
-    html += '<div class="drawer-section-title">🛍 买</div>';
-    city.buy.forEach(function(item) {
-      html += '<div class="drawer-item">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
-    });
-  }
-  document.getElementById('drawerBody').innerHTML = html;
+  renderDrawerItems(cityKey, city);
+  renderComments(cityKey);
 
   document.getElementById('overlay').classList.add('open');
   document.getElementById('drawer').classList.add('open');
@@ -732,5 +821,191 @@ document.getElementById('drawer').addEventListener('touchend', function(e) {
   if (dy > 80 && this.scrollTop <= 0) closeDrawer();
 });
 </script>
+
+<!-- AI 行程弹窗 -->
+<div class="ai-modal-overlay" id="aiModalOverlay">
+  <div class="ai-modal">
+    <div><button class="ai-modal-close" onclick="closeAiModal()">✕</button>
+    <div class="ai-modal-title" id="aiModalTitle">AI 行程安排</div></div>
+    <div class="ai-modal-body" id="aiModalBody">生成中...</div>
+  </div>
+</div>
+
+<!-- 用户名设置弹窗 -->
+<div class="username-modal-overlay" id="usernameModalOverlay">
+  <div class="username-modal">
+    <h3>起个昵称</h3>
+    <p>留言前需要设置昵称，之后可在此页修改</p>
+    <input type="text" id="usernameInput" placeholder="你的昵称（最多10字）" maxlength="10">
+    <button onclick="saveUsername()">确定</button>
+  </div>
+</div>
+
+<script>
+var WORKER = 'https://shanxi-travel-api.xingqiyi.workers.dev';
+var currentCityKey = '';
+var currentCityName = '';
+var checkedItems = JSON.parse(localStorage.getItem('shanxi_checked') || '{}');
+var username = localStorage.getItem('shanxi_username') || '';
+
+function saveUsername() {
+  var val = document.getElementById('usernameInput').value.trim();
+  if (!val) return;
+  username = val;
+  localStorage.setItem('shanxi_username', username);
+  document.getElementById('usernameModalOverlay').classList.remove('open');
+  // 继续留言流程
+  document.getElementById('pendingComment') && submitComment();
+}
+
+function getCheckedKey(cityKey, section, name) {
+  return cityKey + ':' + section + ':' + name;
+}
+
+function toggleCheck(cityKey, section, name, el) {
+  var key = getCheckedKey(cityKey, section, name);
+  if (checkedItems[key]) {
+    delete checkedItems[key];
+    el.classList.remove('checked');
+  } else {
+    checkedItems[key] = true;
+    el.classList.add('checked');
+  }
+  localStorage.setItem('shanxi_checked', JSON.stringify(checkedItems));
+}
+
+function renderDrawerItems(cityKey, city) {
+  var html = '';
+  function renderSection(icon, label, items, section) {
+    if (!items || !items.length) return '';
+    var s = '<div class="drawer-section-title">' + icon + ' ' + label + '</div>';
+    items.forEach(function(item) {
+      var key = getCheckedKey(cityKey, section, item.name);
+      var checked = checkedItems[key] ? ' checked' : '';
+      s += '<div class="drawer-item' + checked + '" onclick="toggleCheck('' + cityKey + '','' + section + '','' + item.name.replace(/'/g,"\'") + '',this)">';
+      s += '<span class="check-icon">✓</span>';
+      s += item.name;
+      s += item.note ? '<span class="item-note">' + item.note + '</span>' : '';
+      s += '</div>';
+    });
+    return s;
+  }
+  html += renderSection('🍜', '吃', city.food, 'food');
+  html += renderSection('🗺', '游', city.play, 'play');
+  html += renderSection('🏨', '住', city.stay, 'stay');
+  html += renderSection('🛍', '买', city.buy, 'buy');
+  document.getElementById('drawerBody').innerHTML = html;
+}
+
+function renderComments(cityKey) {
+  var section = document.getElementById('commentSection');
+  section.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">加载留言中...</div>';
+  fetch(WORKER + '/comments?city=' + cityKey)
+    .then(function(r){ return r.json(); })
+    .then(function(comments) {
+      var html = '<div class="comment-section-title">💬 旅行者留言</div>';
+      if (comments.length === 0) {
+        html += '<div style="color:#bbb;font-size:12px;padding:4px 0 8px">还没有留言，来第一个吧</div>';
+      } else {
+        comments.forEach(function(c) {
+          var t = new Date(c.time);
+          var timeStr = (t.getMonth()+1) + '月' + t.getDate() + '日';
+          html += '<div class="comment-card"><div class="comment-meta"><b>' + c.username + '</b>  ' + timeStr + '</div><div class="comment-text">' + c.content.replace(/</g,'&lt;') + '</div></div>';
+        });
+      }
+      // 留言表单
+      if (username) {
+        html += '<div class="comment-form">';
+        html += '<textarea class="comment-input" id="commentText" rows="3" placeholder="分享你的旅行经验..."></textarea>';
+        html += '<button class="comment-submit" onclick="submitComment()">发布留言</button>';
+        html += '</div>';
+        html += '<div style="font-size:11px;color:#bbb;margin-top:4px">当前昵称：' + username + '  <span style="color:#3a7a3a;cursor:pointer" onclick="changeUsername()">修改</span></div>';
+      } else {
+        html += '<div class="login-bar">设置昵称后可以留言<button class="login-btn" onclick="showUsernameModal()">设置昵称</button></div>';
+      }
+      section.innerHTML = html;
+    })
+    .catch(function() {
+      section.innerHTML = '<div style="color:#f66;font-size:12px">留言加载失败</div>';
+    });
+}
+
+function showUsernameModal() {
+  document.getElementById('usernameModalOverlay').classList.add('open');
+  document.getElementById('usernameInput').value = username;
+}
+function changeUsername() { showUsernameModal(); }
+
+function submitComment() {
+  var text = document.getElementById('commentText');
+  if (!text || !text.value.trim()) return;
+  var content = text.value.trim();
+  var btn = document.querySelector('.comment-submit');
+  if (btn) btn.disabled = true;
+  fetch(WORKER + '/comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ city: currentCityKey, username: username, content: content })
+  }).then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.ok) renderComments(currentCityKey);
+      else alert(d.error || '发布失败');
+    })
+    .catch(function(){ alert('网络错误，请重试'); if (btn) btn.disabled = false; });
+}
+
+function generateItinerary() {
+  var checked = [];
+  var city = drawerData[currentCityKey];
+  function collect(items, section) {
+    if (!items) return;
+    items.forEach(function(item) {
+      if (checkedItems[getCheckedKey(currentCityKey, section, item.name)]) {
+        checked.push(item.name);
+      }
+    });
+  }
+  collect(city.food, 'food');
+  collect(city.play, 'play');
+  collect(city.stay, 'stay');
+  collect(city.buy, 'buy');
+
+  if (checked.length === 0) {
+    alert('请先勾选想去的地方和想吃的东西～');
+    return;
+  }
+
+  var days = document.getElementById('daysSelect').value;
+  document.getElementById('aiModalTitle').textContent = currentCityName + ' ' + days + '日行程';
+  document.getElementById('aiModalBody').textContent = '🤔 AI正在规划中，请稍候...';
+  document.getElementById('aiModalOverlay').classList.add('open');
+
+  var btn = document.getElementById('aiBtn');
+  btn.disabled = true;
+
+  fetch(WORKER + '/ai/itinerary', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ city: currentCityName, items: checked, days: parseInt(days) })
+  }).then(function(r){ return r.json(); })
+    .then(function(d) {
+      btn.disabled = false;
+      if (d.ok) {
+        document.getElementById('aiModalBody').textContent = d.itinerary;
+      } else {
+        document.getElementById('aiModalBody').textContent = '生成失败：' + (d.error || '未知错误');
+      }
+    })
+    .catch(function(e) {
+      btn.disabled = false;
+      document.getElementById('aiModalBody').textContent = '网络错误，请重试';
+    });
+}
+
+function closeAiModal() {
+  document.getElementById('aiModalOverlay').classList.remove('open');
+}
+</script>
+
 </body>
 </html>
