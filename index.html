@@ -1048,9 +1048,9 @@ function renderPlanCards(plan) {
         // 卡片
         html += '<div style="flex:1;background:' + bg + ';border-radius:12px;padding:10px 12px;margin-bottom:0">';
         html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+        html += '<span style="font-size:11px;color:#fff;background:' + color + ';border-radius:6px;padding:2px 7px;flex-shrink:0;font-weight:600">' + (slot.time||'') + '</span>';
         html += '<span style="font-size:18px">' + (slot.icon||'📍') + '</span>';
         html += '<span style="font-size:14px;font-weight:600;color:#222">' + (slot.title||'') + '</span>';
-        html += '<span style="margin-left:auto;font-size:11px;color:#999;background:#fff;border-radius:8px;padding:1px 7px">' + (slot.time||'') + '</span>';
         html += '</div>';
         if (slot.desc) html += '<div style="font-size:13px;color:#444;line-height:1.6;margin-bottom:4px">' + slot.desc + '</div>';
         if (slot.tip) html += '<div style="font-size:11px;color:#888;background:rgba(0,0,0,.04);border-radius:6px;padding:4px 8px">💡 ' + slot.tip + '</div>';
