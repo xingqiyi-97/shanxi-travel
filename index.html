@@ -990,20 +990,7 @@ function generateGlobalItinerary() {
   document.getElementById('aiModalOverlay').classList.add('open');
 
   var dateStr = date.replace(/-/g, '/');
-  var prompt = '你是一个专业的山西旅行规划师。请根据以下信息，生成一份详细的行程安排表格：
-
-出发地：' + origin + '
-出发日期：' + dateStr + '
-总天数：' + days + '天
-已选目的地和内容：' + itemDesc + '
-
-要求：
-1. 输出为Markdown表格，列为：日期、时间段、地点/城市、活动内容、贴士
-2. 时间段分为：上午/中午/下午/晚上
-3. 合理安排交通衔接，注明城市间距离和交通方式
-4. 每个活动给出1句实用贴士
-5. 语言简洁口语化
-6. 只输出表格，不要其他多余内容';
+  var prompt = '你是专业山西旅行规划师。根据以下信息生成行程，只输出JSON数组，不要任何其他文字或代码块标记。\n出发地：' + origin + '\n出发日期：' + dateStr + '\n总天数：' + days + '天\n已选内容：' + itemDesc + '\n\n格式（严格JSON数组）：[{"day":1,"date":"5/20 周二","city":"大同","theme":"云冈石窟·古城","slots":[{"time":"上午","icon":"🏛","title":"云冈石窟","desc":"重点看第20窟大佛，游览约2小时","tip":"早去人少"},{"time":"中午","icon":"🍜","title":"齐家疙瘩汤","desc":"点招牌疙瘩汤和开花黄馍馍","tip":"饭点前去避免等位"},{"time":"下午","icon":"🏰","title":"大同古城","desc":"华严寺+代王府步行可达","tip":"穿舒适鞋"},{"time":"交通","icon":"🚗","title":"大同→忻州","desc":"高速约2.5小时","tip":"建议17点前出发"}]}]\n\n要求：每天4-5个slot（上午/中午/下午/晚上/交通），跨城市加交通slot，贴士一句话';
 
   fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
