@@ -500,6 +500,56 @@ const CITIES = [
     ],
     stay:[],buy:[],trips:[],
   },
+
+  {
+    key:'mangshi', name:'芒市', color:'#2e9e6b', lat:24.437, lng:98.588,
+    hint:'金塔 · 孔雀湖 · 傣族风情',
+    food:[
+      {name:'勐芭啦老挝奶咖',note:'芒果糯米饭必点'},
+      {name:'傣景园',note:'烤鱼强推，芒果牛肉略腥可跳'},
+      {name:'保山兄弟破酥包',note:'外卖也能点，早餐首选'},
+      {name:'秀华建水菊花过桥米线店',note:'过桥米线，本地老字号'},
+      {name:'棒赛撒撇店',note:'撒撇是芒市特色，值得一试'},
+      {name:'不贰小肉串',note:'奶筋+虾+肉串必点，炒花甲跳过'},
+      {name:'银家早点',note:'本地人的早点摊，接地气'},
+    ],
+    play:[
+      {name:'勐焕大金塔',note:'进殿脱鞋静心坐坐；走路上山15-20分钟，走上走下都推荐'},
+      {name:'树包塔',note:'古树缠塔，拍照好看'},
+      {name:'孔雀湖',note:'傣味湖景，散步放松'},
+    ],
+    stay:[
+      {name:'浩枫温德姆酒店',note:'可接送机，位置在芒市广场'},
+    ],
+    buy:[
+      {name:'宏利综合市场',note:'买牛干巴选辣味半干的，别买太硬的'},
+    ],
+    trips:[],
+  },
+  {
+    key:'tengchong', name:'腾冲', color:'#7b4fa6', lat:25.032, lng:98.490,
+    hint:'和顺古镇 · 国殇墓园 · 高黎贡山',
+    food:[
+      {name:'正宗固东火烧肉米线',note:'腾冲必吃，火烧肉是本地魂'},
+      {name:'老挝糯米饭',note:'干吧片+包烧糯米饭强推，这家水准稳'},
+      {name:'边疆缘腾冲风味菜馆',note:'火烧猪必点，可带去旁边老滚锅涮'},
+      {name:'老滚锅铜瓢牛肉',note:'和火烧猪搭着吃，双倍满足'},
+    ],
+    play:[
+      {name:'和顺古镇',note:'一票游7天，别在里面吃，出来吃更好'},
+      {name:'国殇墓园',note:'远征军长眠地，值得静静走一遍'},
+      {name:'绮罗古镇',note:'9-12点早市最热闹，豆荚娃娃必买'},
+      {name:'黑鱼河风景区',note:'免费无需向导，停车场步行进去即可'},
+      {name:'高黎贡山五道溪',note:'经典徒步线，量力而行'},
+    ],
+    stay:[
+      {name:'竹雨轩客栈',note:'古镇里住，均价150，性价比高'},
+      {name:'汀城酒店',note:'110左右，干净实惠，超值'},
+      {name:'格林东方酒店',note:'安静舒适，均价260，品质之选'},
+    ],
+    buy:[],
+    trips:[],
+  },
 ];
 
 const TAB_CFG = [
@@ -524,7 +574,7 @@ let username = localStorage.getItem('shanxi_username')||'';
 /* ===== 高德地图 ===== */
 function initMap() {
   var map = new AMap.Map('amap', {
-    center:[112.0,37.5], zoom:7,
+    center:[107.0,33.0], zoom:5,
     mapStyle:'amap://styles/whitesmoke',
     resizeEnable:true,
   });
